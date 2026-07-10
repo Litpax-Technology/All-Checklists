@@ -4,92 +4,95 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Litpax Checklists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="header">
-  <button class="back-btn" id="backBtn" onclick="goHome()">←</button>
-  <div>
-    <h1 id="headerTitle">Litpax Checklists</h1>
-    <p>Litpax Technology Pvt. Ltd.</p>
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <button class="icon-btn ghost hidden" id="backBtn" aria-label="Back">&larr;</button>
+    <div class="brand-mark">L</div>
+    <div class="titles">
+      <h1 id="headerTitle">Litpax Checklists</h1>
+      <div class="sub">Litpax Technology Pvt. Ltd.</div>
+    </div>
+    <button class="icon-btn" id="newBtn">+ New</button>
   </div>
-</div>
+</header>
 
 <!-- HOME -->
-<div id="home-screen">
+<main id="screen-home">
   <div class="container">
-
-    <div class="date-banner">
-      <div class="date">📅 <strong id="todayDate"></strong></div>
-    </div>
-
-    <div class="section-label">Checklists</div>
-
-    <div class="checklist-card" onclick="openChecklist('production')">
-      <div class="card-icon blue">🏭</div>
-      <div class="card-info">
-        <h3>Daily Production Checklist</h3>
-        <div class="meta">Production Incharge</div>
-      </div>
-      <span class="card-status status-pending" id="status-production">Pending</span>
-      <span class="card-arrow">›</span>
-    </div>
-
-    <div class="checklist-card disabled">
-      <div class="card-icon green">🚚</div>
-      <div class="card-info">
-        <h3>Dispatch Checklist</h3>
-        <div class="meta">Coming soon — Kapil ke liye</div>
-      </div>
-      <span class="card-status status-pending">Soon</span>
-      <span class="card-arrow">›</span>
-    </div>
-
-    <div class="checklist-card disabled">
-      <div class="card-icon orange">📦</div>
-      <div class="card-info">
-        <h3>Store Inward Checklist</h3>
-        <div class="meta">Coming soon — Ajay ke liye</div>
-      </div>
-      <span class="card-status status-pending">Soon</span>
-      <span class="card-arrow">›</span>
-    </div>
-
+    <div class="date-line">&#128197; <strong id="todayDate"></strong></div>
+    <div class="eyebrow">Checklists</div>
+    <div class="list" id="clList"></div>
   </div>
-</div>
+</main>
 
-<!-- CHECKLIST SCREEN -->
-<div id="checklist-screen">
+<!-- FILL -->
+<main id="screen-fill" class="hidden">
   <div class="container">
-
-    <div class="cl-header">
-      <h2 id="cl-title"></h2>
-      <div class="progress-wrap">
-        <div class="progress-fill" id="progressBar"></div>
+    <div class="cl-head">
+      <h2 id="clTitle"></h2>
+      <div class="cl-sub" id="clSub"></div>
+      <div class="progress-row">
+        <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+        <span class="progress-count" id="progressCount">0/0</span>
       </div>
-      <div class="progress-text" id="progressText">0 / 0 answered</div>
     </div>
-
-    <div id="checklist-body"></div>
-
-    <div class="submit-section">
-      <div class="loading-spinner" id="loadingSpinner">⏳ Google Sheet mein save ho raha hai...</div>
-      <button class="submit-btn" id="submitBtn" onclick="submitChecklist()">Submit Checklist</button>
+    <div id="items"></div>
+    <div class="submit-wrap">
+      <div class="inline-note" id="submitNote"></div>
+      <button class="btn-primary" id="submitBtn" onclick="submitChecklist()">Submit</button>
     </div>
-
   </div>
-</div>
+</main>
+
+<!-- BUILDER -->
+<main id="screen-builder" class="hidden">
+  <div class="container">
+    <div class="builder-block">
+      <h3>Checklist details</h3>
+      <label class="form-label">Naam</label>
+      <input class="field" id="bName" placeholder="e.g. Dispatch Checklist">
+      <label class="form-label">Owner / department (optional)</label>
+      <input class="field" id="bOwner" placeholder="e.g. Kapil — Dispatch">
+      <label class="form-label">Icon</label>
+      <div class="emoji-pick" id="iconPick"></div>
+    </div>
+
+    <div class="builder-block">
+      <h3>Sawaal</h3>
+      <div id="bItems"></div>
+      <button class="add-q-btn" onclick="addBuilderItem()">+ Sawaal add karo</button>
+    </div>
+
+    <div class="builder-block">
+      <label class="form-label" style="margin-top:0">Admin PIN</label>
+      <input class="field" id="bPin" type="password" inputmode="numeric" placeholder="PIN">
+    </div>
+
+    <div class="submit-wrap">
+      <button class="btn-primary ready" id="saveBtn" onclick="saveChecklist()">Checklist save karo</button>
+    </div>
+  </div>
+</main>
 
 <!-- SUCCESS -->
-<div class="success-overlay" id="successOverlay">
-  <div class="success-box">
-    <div class="tick">✅</div>
-    <h2>Submitted!</h2>
-    <p>Aaj ki checklist Google Sheet mein save ho gayi.<br/>Kal phir sham ko fill karna hai.</p>
-    <button onclick="closeSuccess()">Home Pe Jao</button>
+<div class="overlay" id="successOverlay">
+  <div class="modal">
+    <div class="check">&#10003;</div>
+    <h2>Submit ho gaya</h2>
+    <p>Aaj ki checklist Google Sheet mein save ho gayi.<br>Kal phir sham ko bhar dena.</p>
+    <button class="btn-primary" onclick="closeSuccess()">Home pe jao</button>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
 </body>
