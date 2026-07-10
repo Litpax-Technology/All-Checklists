@@ -1,20 +1,21 @@
 /* ============================================================
-   LITPAX CHECKLISTS – Frontend
+   LITPAX CHECKLISTS – Frontend (premium)
    Checklists Google Sheet se load hote hain (dynamic).
-   Naya checklist app ke builder se ya seedhe Sheet se add ho sakta hai.
    ============================================================ */
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaJBgkCz9ev4Uj56Lsd_OcinAyBxzphVUZxnoTWo1odTZ5cDd6UB5IAxi5eezqQ2Ih9A/exec";
 
-let CHECKLISTS = [];        // Sheet se aaya data
-let current    = null;      // abhi khula checklist object
-let answers    = {};        // { itemIndex: value }
-let submitted  = {};        // aaj kaun se submit ho gaye (localStorage)
+let CHECKLISTS = [];
+let current    = null;
+let answers    = {};
+let submitted  = {};
 
 /* ---------- Boot ---------- */
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("todayDate").textContent = new Date()
-    .toLocaleDateString("hi-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const now = new Date();
+  document.getElementById("todayDate").textContent =
+    now.toLocaleDateString("hi-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  document.getElementById("greet").textContent = greeting(now) + " 👋";
 
   submitted = loadState();
   loadChecklists();
@@ -23,78 +24,96 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("newBtn").addEventListener("click", openBuilder);
 });
 
-/* ---------- Local date (UTC bug fix) ---------- */
+function greeting(d) {
+  const h = d.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/* ---------- Local date state ---------- */
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function loadState() {
-  try { return JSON.parse(localStorage.getItem("cl_" + todayKey()) || "{}"); }
-  catch { return {}; }
-}
+function loadState() { try { return JSON.parse(localStorage.getItem("cl_" + todayKey()) || "{}"); } catch { return {}; } }
 function saveState() { localStorage.setItem("cl_" + todayKey(), JSON.stringify(submitted)); }
 
-/* ---------- Load config from Sheet ---------- */
+/* ---------- Ring helper ---------- */
+function setRing(circleEl, r, pct) {
+  const c = 2 * Math.PI * r;
+  circleEl.style.strokeDasharray = c.toFixed(2);
+  circleEl.style.strokeDashoffset = (c * (1 - pct / 100)).toFixed(2);
+}
+
+/* ---------- Load config ---------- */
 function loadChecklists() {
-  showHomeState("loading");
+  showSkeleton();
   jsonp(SCRIPT_URL + "?action=getChecklists")
     .then(data => {
-      if (data && data.success) {
-        CHECKLISTS = data.checklists || [];
-        renderHome();
-      } else {
-        showHomeState("error", (data && data.message) || "Load nahi hua");
-      }
+      if (data && data.success) { CHECKLISTS = data.checklists || []; renderHome(); }
+      else showError((data && data.message) || "Load nahi hua");
     })
-    .catch(() => showHomeState("error", "Internet ya server issue"));
+    .catch(() => showError("Internet ya server issue"));
 }
 
 /* ---------- HOME ---------- */
 function renderHome() {
   const list = document.getElementById("clList");
-  if (!CHECKLISTS.length) {
+
+  // daily summary
+  const total = CHECKLISTS.length;
+  const done  = CHECKLISTS.filter(c => submitted[c.id]).length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+  setRing(document.getElementById("heroFill"), 27, pct);
+  document.getElementById("heroPct").textContent = pct + "%";
+  document.getElementById("daySummary").innerHTML = total
+    ? (done === total && total > 0 ? "Aaj sab checklist done ✅" : `Aaj <b>${done}/${total}</b> checklist done`)
+    : "Abhi koi checklist nahi";
+
+  if (!total) {
     list.innerHTML = `<div class="state">Abhi koi checklist nahi hai.<br>Upar “+ New” se ek banao.</div>`;
     return;
   }
   list.innerHTML = CHECKLISTS.map(cl => {
-    const done = submitted[cl.id];
-    const pill = done ? `<span class="pill done">Done</span>` : `<span class="pill pending">Pending</span>`;
+    const isDone = submitted[cl.id];
+    const pill = isDone ? `<span class="pill done">Done</span>` : `<span class="pill pending">Pending</span>`;
     return `
-      <div class="card" data-id="${cl.id}">
+      <div class="card ${isDone ? "done-card" : ""}" data-id="${cl.id}">
         <div class="card-icon">${cl.icon || "\uD83D\uDCCB"}</div>
         <div class="card-body">
           <h3>${esc(cl.name)}</h3>
           <div class="meta">${esc(cl.owner || cl.subtitle || `${cl.items.length} points`)}</div>
         </div>
-        ${pill}
-        <span class="chevron">\u203A</span>
+        ${pill}<span class="chevron">\u203A</span>
       </div>`;
   }).join("");
   list.querySelectorAll(".card").forEach(c =>
     c.addEventListener("click", () => openChecklist(c.dataset.id)));
 }
 
-function showHomeState(kind, msg) {
-  const list = document.getElementById("clList");
-  if (kind === "loading")
-    list.innerHTML = `<div class="state"><div class="spin"></div>Checklists load ho rahe hain…</div>`;
-  else if (kind === "error")
-    list.innerHTML = `<div class="state">${esc(msg || "Error")}<br>
-      <button class="icon-btn" onclick="loadChecklists()">Dobara try karo</button></div>`;
+function showSkeleton() {
+  document.getElementById("clList").innerHTML = Array(3).fill(`
+    <div class="sk">
+      <div class="sk-box sk-ic"></div>
+      <div style="flex:1"><div class="sk-box sk-l1"></div><div class="sk-box sk-l2"></div></div>
+    </div>`).join("");
+}
+function showError(msg) {
+  document.getElementById("clList").innerHTML =
+    `<div class="state">${esc(msg)}<br><button class="icon-btn" onclick="loadChecklists()">Dobara try karo</button></div>`;
 }
 
-/* ---------- FILL a checklist ---------- */
+/* ---------- FILL ---------- */
 function openChecklist(id) {
   current = CHECKLISTS.find(c => c.id === id);
   if (!current) return;
   answers = {};
-
   document.getElementById("headerTitle").textContent = current.name;
   document.getElementById("clTitle").textContent = current.name;
   document.getElementById("clSub").textContent = current.subtitle || current.owner || "";
   document.getElementById("backBtn").classList.remove("hidden");
   document.getElementById("newBtn").classList.add("hidden");
-
   renderItems();
   updateProgress();
   swap("fill");
@@ -106,17 +125,14 @@ function renderItems() {
     <div class="q" id="q-${idx}">
       <div class="q-top">
         <div class="q-num">${idx + 1}</div>
-        <div>
-          <div class="q-label">${esc(item.label)}</div>
-          ${item.tip ? `<div class="q-tip">${esc(item.tip)}</div>` : ""}
-        </div>
+        <div><div class="q-label">${esc(item.label)}</div>
+        ${item.tip ? `<div class="q-tip">${esc(item.tip)}</div>` : ""}</div>
       </div>
-      <div class="q-input">${inputHtml(item, idx)}</div>
+      <div class="q-input">${inputHtml(item)}</div>
     </div>`).join("");
 
-  // wire up
   current.items.forEach((item, idx) => {
-    if (item.type === "yesno" || item.type === "percent" || item.type === "select") {
+    if (["yesno", "percent", "select"].includes(item.type)) {
       document.querySelectorAll(`#q-${idx} .opt`).forEach(btn =>
         btn.addEventListener("click", () => setOption(idx, btn.dataset.val, btn)));
     } else {
@@ -127,21 +143,18 @@ function renderItems() {
   renderSignature(body);
 }
 
-function inputHtml(item, idx) {
-  if (item.type === "yesno") {
+function inputHtml(item) {
+  if (item.type === "yesno")
     return `<div class="opt-row">
       <button class="opt yes" data-val="Yes">\u2705 Yes</button>
-      <button class="opt no"  data-val="No">\u274C No</button></div>`;
-  }
+      <button class="opt no" data-val="No">\u274C No</button></div>`;
   if (item.type === "percent") {
-    const opts = item.options.length ? item.options : ["70", "80", "90", "100"];
-    return `<div class="opt-row">${opts.map(o =>
-      `<button class="opt" data-val="${o}%">${o}%</button>`).join("")}</div>`;
+    const o = item.options.length ? item.options : ["70", "80", "90", "100"];
+    return `<div class="opt-row">${o.map(v => `<button class="opt" data-val="${v}%">${v}%</button>`).join("")}</div>`;
   }
   if (item.type === "select") {
-    const opts = item.options.length ? item.options : ["Option 1", "Option 2"];
-    return `<div class="opt-row">${opts.map(o =>
-      `<button class="opt" data-val="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    const o = item.options.length ? item.options : ["Option 1", "Option 2"];
+    return `<div class="opt-row">${o.map(v => `<button class="opt" data-val="${esc(v)}">${esc(v)}</button>`).join("")}</div>`;
   }
   if (item.type === "number")
     return `<input type="number" inputmode="numeric" class="field" placeholder="Number likho…">`;
@@ -176,9 +189,15 @@ function updateProgress() {
   const total = current.items.length;
   const done  = Object.keys(answers).length;
   const pct   = total ? Math.round(done / total * 100) : 0;
-  document.getElementById("barFill").style.width = pct + "%";
-  document.getElementById("progressCount").textContent = `${done}/${total}`;
+  setRing(document.getElementById("fillRing"), 30, pct);
+  document.getElementById("ringCount").textContent = `${done}/${total}`;
+
+  const status = document.getElementById("clStatus");
   const btn = document.getElementById("submitBtn");
+  if (done === 0) { status.textContent = "Shuru karo"; }
+  else if (done === total) { status.textContent = "Sab ho gaya — submit karo"; }
+  else { status.textContent = `${total - done} baaki`; }
+
   if (done === total) { btn.classList.add("ready"); btn.textContent = "Submit checklist"; }
   else { btn.classList.remove("ready"); btn.textContent = `Submit (${done}/${total})`; }
 }
@@ -188,53 +207,36 @@ function submitChecklist() {
   const collectedBy = val("collectedBy");
   const checkedBy   = val("checkedBy");
   if (!collectedBy) { toast("‘Collected by’ ka naam daalo"); focus("collectedBy"); return; }
-
   const missing = current.items.filter((_, i) => !answers[i]).length;
   if (missing && !confirm(`${missing} sawaal baaki hain. Phir bhi submit karein?`)) return;
 
   const btn = document.getElementById("submitBtn");
   btn.disabled = true;
   document.getElementById("submitNote").textContent = "Google Sheet mein save ho raha hai…";
-
   const items = current.items.map((it, i) => ({ label: it.label, answer: answers[i] || "\u2014" }));
 
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "submitChecklist",
-      checklistName: current.name,
-      collectedBy, checkedBy, items
-    })
-  })
+  fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({
+    action: "submitChecklist", checklistName: current.name, collectedBy, checkedBy, items }) })
     .then(r => r.json())
     .then(data => {
-      btn.disabled = false;
-      document.getElementById("submitNote").textContent = "";
+      btn.disabled = false; document.getElementById("submitNote").textContent = "";
       if (data.success) {
         submitted[current.id] = true; saveState();
         document.getElementById("successOverlay").classList.add("show");
       } else toast("Error: " + (data.message || "unknown"));
     })
-    .catch(() => {
-      btn.disabled = false;
-      document.getElementById("submitNote").textContent = "";
-      toast("Connection error. Internet check karo.");
-    });
+    .catch(() => { btn.disabled = false; document.getElementById("submitNote").textContent = ""; toast("Connection error. Internet check karo."); });
 }
-function closeSuccess() {
-  document.getElementById("successOverlay").classList.remove("show");
-  goHome();
-}
+function closeSuccess() { document.getElementById("successOverlay").classList.remove("show"); goHome(); }
 
-/* ---------- BUILDER (add new checklist) ---------- */
+/* ---------- BUILDER ---------- */
 let builderIcon = "\uD83D\uDCCB";
-const ICONS = ["\uD83D\uDCCB", "\uD83C\uDFED", "\uD83D\uDE9A", "\uD83D\uDCE6", "\uD83D\uDD0B", "\uD83D\uDCB0", "\uD83D\uDD27", "\u2705"];
+const ICONS = ["\uD83D\uDCCB", "\uD83C\uDFED", "\uD83D\uDE9A", "\uD83D\uDCE6", "\uD83D\uDD0B", "\uD83E\uDDFA", "\uD83D\uDD27", "\u2705"];
 
 function openBuilder() {
   document.getElementById("headerTitle").textContent = "New checklist";
   document.getElementById("backBtn").classList.remove("hidden");
   document.getElementById("newBtn").classList.add("hidden");
-
   builderIcon = ICONS[0];
   document.getElementById("bName").value = "";
   document.getElementById("bOwner").value = "";
@@ -247,23 +249,18 @@ function openBuilder() {
       document.querySelectorAll("#iconPick .emoji-opt").forEach(x => x.classList.remove("on"));
       b.classList.add("on");
     }));
-
   document.getElementById("bItems").innerHTML = "";
   addBuilderItem(); addBuilderItem();
   swap("builder");
-  window.scrollTo(0, 0);
 }
 
 function addBuilderItem() {
   const wrap = document.getElementById("bItems");
-  const n = wrap.children.length + 1;
   const div = document.createElement("div");
   div.className = "q-builder";
   div.innerHTML = `
-    <div class="q-builder-head">
-      <span class="n">Sawaal ${n}</span>
-      <button class="rm-btn" type="button">Hatao</button>
-    </div>
+    <div class="q-builder-head"><span class="n">Sawaal ${wrap.children.length + 1}</span>
+      <button class="rm-btn" type="button">Hatao</button></div>
     <input class="field b-label" placeholder="Sawaal likho…">
     <div class="row-2" style="margin-top:9px">
       <input class="field b-tip" placeholder="Tip (optional)">
@@ -276,8 +273,7 @@ function addBuilderItem() {
       </select>
     </div>
     <input class="field b-opts hidden" placeholder="Options comma se: A, B, C" style="margin-top:9px">`;
-  const typeSel = div.querySelector(".b-type");
-  const optsInp = div.querySelector(".b-opts");
+  const typeSel = div.querySelector(".b-type"), optsInp = div.querySelector(".b-opts");
   typeSel.addEventListener("change", () =>
     optsInp.classList.toggle("hidden", !(typeSel.value === "percent" || typeSel.value === "select")));
   div.querySelector(".rm-btn").addEventListener("click", () => { div.remove(); renumberBuilder(); });
@@ -288,11 +284,9 @@ function renumberBuilder() {
 }
 
 function saveChecklist() {
-  const name = val("bName");
-  const pin  = val("bPin");
+  const name = val("bName"), pin = val("bPin");
   if (!name) { toast("Checklist ka naam daalo"); return; }
   if (!pin)  { toast("Admin PIN daalo"); return; }
-
   const items = [];
   document.querySelectorAll("#bItems .q-builder").forEach(row => {
     const label = row.querySelector(".b-label").value.trim();
@@ -306,14 +300,8 @@ function saveChecklist() {
 
   const btn = document.getElementById("saveBtn");
   btn.disabled = true; btn.textContent = "Save ho raha hai…";
-
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "addChecklist",
-      pin, name, owner: val("bOwner"), icon: builderIcon, items
-    })
-  })
+  fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({
+    action: "addChecklist", pin, name, owner: val("bOwner"), icon: builderIcon, items }) })
     .then(r => r.json())
     .then(data => {
       btn.disabled = false; btn.textContent = "Checklist save karo";
@@ -349,7 +337,6 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
 }
 
-/* JSONP loader (GitHub Pages → GAS ke liye reliable) */
 function jsonp(url) {
   return new Promise((resolve, reject) => {
     const cb = "cl_cb_" + Date.now();
