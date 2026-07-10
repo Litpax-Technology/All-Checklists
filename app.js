@@ -4,7 +4,7 @@
    Naya checklist app ke builder se ya seedhe Sheet se add ho sakta hai.
    ============================================================ */
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCg6ewGGjBAEzj4jD6EFJEoZdi8GClZjUHGYogtyAZK_NfylZhmitJW2b_urClYdL76w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaJBgkCz9ev4Uj56Lsd_OcinAyBxzphVUZxnoTWo1odTZ5cDd6UB5IAxi5eezqQ2Ih9A/exec";
 
 let CHECKLISTS = [];        // Sheet se aaya data
 let current    = null;      // abhi khula checklist object
