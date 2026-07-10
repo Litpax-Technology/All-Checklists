@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Litpax Checklists</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,6 @@
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="header">
   <div class="header-inner">
     <button class="icon-btn ghost hidden" id="backBtn" aria-label="Back">&larr;</button>
@@ -27,7 +26,21 @@
 <!-- HOME -->
 <main id="screen-home">
   <div class="container">
-    <div class="date-line">&#128197; <strong id="todayDate"></strong></div>
+    <div class="hero">
+      <div class="hero-text">
+        <div class="greet" id="greet">Namaste 👋</div>
+        <div class="date" id="todayDate"></div>
+        <div class="summary" id="daySummary"></div>
+      </div>
+      <div class="hero-ring">
+        <svg width="66" height="66" viewBox="0 0 66 66">
+          <circle class="track" cx="33" cy="33" r="27" fill="none" stroke-width="6"></circle>
+          <circle class="fill" id="heroFill" cx="33" cy="33" r="27" fill="none" stroke-width="6"
+                  stroke-dasharray="169.6" stroke-dashoffset="169.6"></circle>
+        </svg>
+        <div class="pct" id="heroPct">0%</div>
+      </div>
+    </div>
     <div class="eyebrow">Checklists</div>
     <div class="list" id="clList"></div>
   </div>
@@ -37,16 +50,32 @@
 <main id="screen-fill" class="hidden">
   <div class="container">
     <div class="cl-head">
-      <h2 id="clTitle"></h2>
-      <div class="cl-sub" id="clSub"></div>
-      <div class="progress-row">
-        <div class="bar"><div class="bar-fill" id="barFill"></div></div>
-        <span class="progress-count" id="progressCount">0/0</span>
+      <div class="cl-meta">
+        <h2 id="clTitle"></h2>
+        <div class="cl-sub" id="clSub"></div>
+        <div class="cl-status" id="clStatus">Shuru karo</div>
+      </div>
+      <div class="fill-ring">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <defs>
+            <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#635BFF"></stop>
+              <stop offset="1" stop-color="#4B44E0"></stop>
+            </linearGradient>
+          </defs>
+          <circle class="track" cx="36" cy="36" r="30" fill="none" stroke-width="6"></circle>
+          <circle class="fill" id="fillRing" cx="36" cy="36" r="30" fill="none" stroke-width="6"
+                  stroke-dasharray="188.5" stroke-dashoffset="188.5"></circle>
+        </svg>
+        <div class="center"><b id="ringCount">0/0</b><span>DONE</span></div>
       </div>
     </div>
     <div id="items"></div>
-    <div class="submit-wrap">
-      <div class="inline-note" id="submitNote"></div>
+    <div class="fill-pad"></div>
+  </div>
+  <div class="action-bar">
+    <div class="action-inner">
+      <div class="action-note" id="submitNote"></div>
       <button class="btn-primary" id="submitBtn" onclick="submitChecklist()">Submit</button>
     </div>
   </div>
@@ -64,21 +93,16 @@
       <label class="form-label">Icon</label>
       <div class="emoji-pick" id="iconPick"></div>
     </div>
-
     <div class="builder-block">
       <h3>Sawaal</h3>
       <div id="bItems"></div>
       <button class="add-q-btn" onclick="addBuilderItem()">+ Sawaal add karo</button>
     </div>
-
     <div class="builder-block">
       <label class="form-label" style="margin-top:0">Admin PIN</label>
       <input class="field" id="bPin" type="password" inputmode="numeric" placeholder="PIN">
     </div>
-
-    <div class="submit-wrap">
-      <button class="btn-primary ready" id="saveBtn" onclick="saveChecklist()">Checklist save karo</button>
-    </div>
+    <button class="btn-primary ready" id="saveBtn" onclick="saveChecklist()" style="margin-bottom:24px">Checklist save karo</button>
   </div>
 </main>
 
@@ -93,7 +117,6 @@
 </div>
 
 <div class="toast" id="toast"></div>
-
 <script src="app.js"></script>
 </body>
 </html>
